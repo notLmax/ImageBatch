@@ -4,3 +4,8 @@ __pycache__/
 .venv/
 venv/
 .env
+.venv-build/
+build/
+dist/
+*.spec.bak
+icon.iconset/
