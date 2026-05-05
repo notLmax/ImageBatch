@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""PyInstaller spec for ImageBatch macOS app."""
+"""Cross-platform PyInstaller spec for ImageBatch (macOS + Windows)."""
 
 import sys
 import importlib
@@ -8,6 +8,9 @@ from pathlib import Path
 from PyInstaller.utils.hooks import copy_metadata
 
 sys.setrecursionlimit(10000)
+
+IS_MAC = sys.platform == "darwin"
+IS_WIN = sys.platform == "win32"
 
 block_cipher = None
 
@@ -59,18 +62,25 @@ a = Analysis(
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
-exe = EXE(
-    pyz,
-    a.scripts,
-    [],
-    exclude_binaries=True,
+exe_kwargs = dict(
     name="ImageBatch",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
     console=False,
-    target_arch="arm64",
+)
+if IS_MAC:
+    exe_kwargs["target_arch"] = "arm64"
+if IS_WIN:
+    exe_kwargs["icon"] = "icon.ico"
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    [],
+    exclude_binaries=True,
+    **exe_kwargs,
 )
 
 coll = COLLECT(
@@ -83,13 +93,14 @@ coll = COLLECT(
     name="ImageBatch",
 )
 
-app = BUNDLE(
-    coll,
-    name="ImageBatch.app",
-    icon="icon.icns",
-    bundle_identifier="com.notlmax.imagebatch",
-    info_plist={
-        "CFBundleShortVersionString": "1.0.0",
-        "NSHighResolutionCapable": True,
-    },
-)
+if IS_MAC:
+    app = BUNDLE(
+        coll,
+        name="ImageBatch.app",
+        icon="icon.icns",
+        bundle_identifier="com.notlmax.imagebatch",
+        info_plist={
+            "CFBundleShortVersionString": "1.0.0",
+            "NSHighResolutionCapable": True,
+        },
+    )

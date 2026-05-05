@@ -1,0 +1,119 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-mac:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Generate icons
+        run: python create_icon.py
+
+      - name: Build app with PyInstaller
+        run: |
+          rm -rf build/ dist/
+          pyinstaller ImageBatch.spec --noconfirm
+
+      - name: Ad-hoc codesign
+        run: codesign --force --deep --sign - dist/ImageBatch.app
+
+      - name: Build DMG
+        run: |
+          DMG_STAGING=$(mktemp -d)
+          cp -R dist/ImageBatch.app "$DMG_STAGING/"
+          ln -s /Applications "$DMG_STAGING/Applications"
+          hdiutil create \
+            -volname "ImageBatch Installer" \
+            -srcfolder "$DMG_STAGING" \
+            -ov \
+            -format UDZO \
+            dist/ImageBatch.dmg
+          rm -rf "$DMG_STAGING"
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ImageBatch-macOS
+          path: dist/ImageBatch.dmg
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Generate icon
+        run: python create_icon.py
+
+      - name: Build app with PyInstaller
+        shell: bash
+        run: |
+          rm -rf build/ dist/
+          pyinstaller ImageBatch.spec --noconfirm
+
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Build installer
+        run: '& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss'
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ImageBatch-Windows
+          path: Output/ImageBatch-Setup.exe
+
+  release:
+    needs: [build-mac, build-windows]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ImageBatch-macOS
+          path: ./mac
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ImageBatch-Windows
+          path: ./win
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ImageBatch ${{ github.ref_name }}
+          files: |
+            ./mac/ImageBatch.dmg
+            ./win/ImageBatch-Setup.exe
+          generate_release_notes: true
+          fail_on_unmatched_files: true

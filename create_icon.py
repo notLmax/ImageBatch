@@ -47,21 +47,27 @@ def create_icon_image(size: int) -> Image.Image:
     return img
 
 
-def main():
+def create_ico() -> None:
+    """Create a multi-resolution icon.ico for Windows."""
+    ico_sizes = [(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
+    base = create_icon_image(256)
+    base.save("icon.ico", format="ICO", sizes=ico_sizes)
+    print("Created icon.ico")
+
+
+def create_icns() -> None:
+    """Create icon.icns for macOS via iconutil."""
     ICON_DIR.mkdir(exist_ok=True)
 
     for s in SIZES:
         img = create_icon_image(s)
-        # Standard size
         if s <= 512:
             img.resize((s, s), Image.LANCZOS).save(ICON_DIR / f"icon_{s}x{s}.png")
-        # @2x size (the 1024 serves as 512@2x)
         if s >= 32:
             half = s // 2
             if half in [16, 32, 64, 128, 256, 512]:
                 img.resize((s, s), Image.LANCZOS).save(ICON_DIR / f"icon_{half}x{half}@2x.png")
 
-    # Use iconutil to create .icns
     result = subprocess.run(
         ["iconutil", "-c", "icns", str(ICON_DIR), "-o", "icon.icns"],
         capture_output=True, text=True,
@@ -70,10 +76,20 @@ def main():
         print(f"iconutil failed: {result.stderr}", file=sys.stderr)
         sys.exit(1)
 
-    # Cleanup
     import shutil
     shutil.rmtree(ICON_DIR)
     print("Created icon.icns")
+
+
+def main():
+    """Generate icons for the current platform.
+
+    On macOS: creates icon.icns (and icon.ico for cross-platform builds).
+    On Windows/Linux: creates icon.ico only.
+    """
+    create_ico()
+    if sys.platform == "darwin":
+        create_icns()
 
 
 if __name__ == "__main__":

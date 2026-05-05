@@ -2,18 +2,30 @@
 
 A desktop app for batch removing backgrounds from product photos using AI. Built with Python, [rembg](https://github.com/danielgatis/rembg), and [customtkinter](https://github.com/TomSchimansky/CustomTkinter).
 
-## Download for macOS
+## Download
 
-Download the latest **ImageBatch.dmg** from the [GitHub Releases](https://github.com/notLmax/ImageBatch/releases/latest) page. Open the DMG, drag ImageBatch to your Applications folder, and you're ready to go.
+Get the latest installer from the [Releases page](https://github.com/notLmax/ImageBatch/releases/latest):
 
-### First Launch (Important)
+- **macOS (Apple Silicon):** `ImageBatch.dmg`
+- **Windows (64-bit):** `ImageBatch-Setup.exe`
 
-Because this app is not signed by an Apple Developer, macOS will block the first launch.
+### First Launch on macOS (Important)
 
-1. Open **Finder** and go to **Applications**
-2. **Right-click** ImageBatch and select **Open**
+Because the app is not signed by an Apple Developer, macOS will block the first launch.
+
+1. Open **Finder** → **Applications**
+2. **Right-click** ImageBatch → **Open**
 3. In the warning dialog, click **Open**
 4. After this one time, you can launch normally from Launchpad or the Dock
+
+### First Launch on Windows
+
+Because the installer is not signed, Windows SmartScreen will warn you.
+
+1. Run `ImageBatch-Setup.exe`
+2. If SmartScreen appears, click **More info** → **Run anyway**
+3. Follow the installer prompts
+4. Launch ImageBatch from the Start Menu
 
 ## Features
 
@@ -52,6 +64,16 @@ To build the macOS `.app` bundle and DMG installer:
 
 This creates `dist/ImageBatch.app` and `dist/ImageBatch.dmg`.
 
+To build the Windows installer (run on Windows with Inno Setup installed):
+
+```cmd
+python create_icon.py
+pyinstaller ImageBatch.spec --noconfirm
+"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
+```
+
+This creates `Output/ImageBatch-Setup.exe`. The GitHub Actions workflow runs this automatically on every push.
+
 ## Project Structure
 
 ```
@@ -61,5 +83,7 @@ processing.py        — background removal worker
 widgets.py           — custom UI components
 utils.py             — image discovery, thumbnails, helpers
 build-mac.sh         — macOS build script (app + DMG)
-ImageBatch.spec      — PyInstaller configuration
+ImageBatch.spec      — cross-platform PyInstaller configuration
+installer.iss        — Inno Setup script for Windows installer
+create_icon.py       — generates icon.icns + icon.ico
 ```
